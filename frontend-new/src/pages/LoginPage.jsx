@@ -35,10 +35,7 @@ const LoginPage = ({ setUser }) => {
           withCredentials: true,
         }
       );
-      console.log("done");
       const { user } = response.data;
-      console.log(API_BASE_URL);
-      console.log(user);
       // No localStorage - cookies handle authentication
       setUser(user);
       navigate("/dashboard");

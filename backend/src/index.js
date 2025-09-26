@@ -17,10 +17,23 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json());
 
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB connection error:', err));
+// Connect to MongoDB with better error handling for serverless
+const connectDB = async () => {
+    try {
+        if (mongoose.connection.readyState === 0) {
+            await mongoose.connect(MONGODB_URI, {
+                bufferCommands: false,
+                maxPoolSize: 1, // Limit connections for serverless
+            });
+            console.log('Connected to MongoDB');
+        }
+    } catch (err) {
+        console.error('MongoDB connection error:', err);
+    }
+};
+
+// Connect on startup
+connectDB();
 
 // Schemas
 const TenantSchema = new mongoose.Schema({
@@ -55,6 +68,8 @@ const Note = mongoose.model('Note', NoteSchema);
 const authenticateToken = async (req, res, next) => {
     // Extract token from cookie (parsed by cookie-parser)
     const token = req.cookies.token;
+    console.log('Auth middleware - token present:', !!token);
+
     if (!token) {
         return res.status(401).json({
             error: 'Access token required',
@@ -64,13 +79,24 @@ const authenticateToken = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+        console.log('Token decoded for user:', decoded.userId);
+
+        // Ensure MongoDB connection
+        if (mongoose.connection.readyState !== 1) {
+            console.log('Reconnecting to MongoDB...');
+            await mongoose.connect(MONGODB_URI);
+        }
+
         const user = await User.findById(decoded.userId).populate('tenantId');
         if (!user) {
+            console.log('User not found for ID:', decoded.userId);
             return res.status(401).json({ error: 'User not found' });
         }
+        console.log('User authenticated:', user.email);
         req.user = user;
         next();
     } catch (error) {
+        console.error('Auth middleware error:', error);
         return res.status(403).json({
             error: 'Invalid token',
             hint: 'Please login again'
@@ -110,12 +136,24 @@ app.post('/auth/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
+        console.log('Login attempt for:', email);
+
+        // Ensure MongoDB connection is established
+        if (mongoose.connection.readyState !== 1) {
+            console.log('Reconnecting to MongoDB...');
+            await mongoose.connect(MONGODB_URI);
+        }
+
         const user = await User.findOne({ email }).populate('tenantId');
+        console.log('User found:', !!user);
+
         if (!user || user.password !== password) { // In production, use proper password hashing
+            console.log('Invalid credentials');
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '24h' });
+        console.log('Token created, setting cookie');
 
         // Set HTTP-only cookie for authentication
         res.cookie('token', token, {
@@ -140,7 +178,8 @@ app.post('/auth/login', async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Server error', details: error.message });
     }
 });
 
