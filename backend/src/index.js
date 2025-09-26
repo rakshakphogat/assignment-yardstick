@@ -1,0 +1,261 @@
+import express from 'express';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://rakshakphogat_db_user:OeySKBa7OQtjzKzb@cluster0.tjhnlcr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Connect to MongoDB
+mongoose.connect(MONGODB_URI)
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => console.error('MongoDB connection error:', err));
+
+// Schemas
+const TenantSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
+    subscription: { type: String, enum: ['free', 'pro'], default: 'free' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const UserSchema = new mongoose.Schema({
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true }, // In production, hash this!
+    role: { type: String, enum: ['admin', 'member'], default: 'member' },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const NoteSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+const Tenant = mongoose.model('Tenant', TenantSchema);
+const User = mongoose.model('User', UserSchema);
+const Note = mongoose.model('Note', NoteSchema);
+
+// Seed data function
+async function seedData() {
+    const existingTenants = await Tenant.countDocuments();
+    if (existingTenants > 0) return; // Already seeded
+
+    // Create tenants
+    const acmeTenant = await Tenant.create({ name: 'Acme Corporation', slug: 'acme' });
+    const globexTenant = await Tenant.create({ name: 'Globex Corporation', slug: 'globex' });
+
+    // Create users (password should be hashed in production)
+    await User.create([
+        { email: 'admin@acme.test', password: 'password', role: 'admin', tenantId: acmeTenant._id },
+        { email: 'user@acme.test', password: 'password', role: 'member', tenantId: acmeTenant._id },
+        { email: 'admin@globex.test', password: 'password', role: 'admin', tenantId: globexTenant._id },
+        { email: 'user@globex.test', password: 'password', role: 'member', tenantId: globexTenant._id }
+    ]);
+
+    console.log('Database seeded successfully');
+}
+
+// Authentication middleware
+const authenticateToken = async (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Access token required' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await User.findById(decoded.userId).populate('tenantId');
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+        req.user = user;
+        next();
+    } catch (error) {
+        return res.status(403).json({ error: 'Invalid token' });
+    }
+};
+
+// Admin role middleware
+const requireAdmin = (req, res, next) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin role required' });
+    }
+    next();
+};
+
+// Routes
+// Health endpoint
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok' });
+});
+
+// Login endpoint
+app.post('/auth/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const user = await User.findOne({ email }).populate('tenantId');
+        if (!user || user.password !== password) { // In production, use proper password hashing
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '24h' });
+
+        res.json({
+            token,
+            user: {
+                id: user._id,
+                email: user.email,
+                role: user.role,
+                tenant: {
+                    id: user.tenantId._id,
+                    name: user.tenantId.name,
+                    slug: user.tenantId.slug,
+                    subscription: user.tenantId.subscription
+                }
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Notes CRUD endpoints
+app.post('/notes', authenticateToken, async (req, res) => {
+    try {
+        const { title, content } = req.body;
+
+        // Check subscription limits for free plan
+        if (req.user.tenantId.subscription === 'free') {
+            const noteCount = await Note.countDocuments({ tenantId: req.user.tenantId._id });
+            if (noteCount >= 3) {
+                return res.status(403).json({
+                    error: 'Free plan limit reached. Upgrade to Pro for unlimited notes.',
+                    code: 'SUBSCRIPTION_LIMIT_REACHED'
+                });
+            }
+        }
+
+        const note = await Note.create({
+            title,
+            content,
+            tenantId: req.user.tenantId._id,
+            userId: req.user._id
+        });
+
+        res.status(201).json(note);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.get('/notes', authenticateToken, async (req, res) => {
+    try {
+        const notes = await Note.find({ tenantId: req.user.tenantId._id })
+            .populate('userId', 'email')
+            .sort({ createdAt: -1 });
+        res.json(notes);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.get('/notes/:id', authenticateToken, async (req, res) => {
+    try {
+        const note = await Note.findOne({
+            _id: req.params.id,
+            tenantId: req.user.tenantId._id
+        }).populate('userId', 'email');
+
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        res.json(note);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.put('/notes/:id', authenticateToken, async (req, res) => {
+    try {
+        const { title, content } = req.body;
+        const note = await Note.findOneAndUpdate(
+            { _id: req.params.id, tenantId: req.user.tenantId._id },
+            { title, content, updatedAt: new Date() },
+            { new: true }
+        );
+
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        res.json(note);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.delete('/notes/:id', authenticateToken, async (req, res) => {
+    try {
+        const note = await Note.findOneAndDelete({
+            _id: req.params.id,
+            tenantId: req.user.tenantId._id
+        });
+
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        res.json({ message: 'Note deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Tenant upgrade endpoint
+app.post('/tenants/:slug/upgrade', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        if (req.user.tenantId.slug !== req.params.slug) {
+            return res.status(403).json({ error: 'Cannot upgrade other tenants' });
+        }
+
+        const tenant = await Tenant.findByIdAndUpdate(
+            req.user.tenantId._id,
+            { subscription: 'pro' },
+            { new: true }
+        );
+
+        res.json({
+            message: 'Tenant upgraded to Pro successfully',
+            tenant: {
+                id: tenant._id,
+                name: tenant.name,
+                slug: tenant.slug,
+                subscription: tenant.subscription
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+
+export default app;
