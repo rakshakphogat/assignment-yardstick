@@ -10,7 +10,7 @@ const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://rakshakphogat_db_u
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://assignment-yardstick-eight.vercel.app'],
+    origin: ['http://localhost:3000', 'https://assignment-yardstick-eight.vercel.app', 'https://yardstick-frontend-omega.vercel.app'],
     credentials: true
 }));
 app.use(express.json());
