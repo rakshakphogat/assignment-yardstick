@@ -23,12 +23,8 @@ const DashboardPage = ({ user, setUser }) => {
   const fetchNotes = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
       const response = await axios.get(`${API_BASE_URL}/notes`, {
-        withCredentials: true,
-        headers: {
-          Authorization: token ? `Bearer ${token}` : undefined,
-        },
+        withCredentials: true
       });
       setNotes(response.data);
     } catch (error) {
@@ -43,12 +39,8 @@ const DashboardPage = ({ user, setUser }) => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
       await axios.delete(`${API_BASE_URL}/notes/${id}`, {
-        withCredentials: true,
-        headers: {
-          Authorization: token ? `Bearer ${token}` : undefined,
-        },
+        withCredentials: true
       });
       setNotes(notes.filter((note) => note._id !== id));
       setSuccess("Note deleted successfully!");
@@ -64,15 +56,11 @@ const DashboardPage = ({ user, setUser }) => {
     setLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("token");
       await axios.post(
         `${API_BASE_URL}/tenants/${user.tenant.slug}/upgrade`,
         {},
         {
-          withCredentials: true,
-          headers: {
-            Authorization: token ? `Bearer ${token}` : undefined,
-          },
+          withCredentials: true
         }
       );
       const updatedUser = {
@@ -80,7 +68,6 @@ const DashboardPage = ({ user, setUser }) => {
         tenant: { ...user.tenant, subscription: "pro" },
       };
       setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
       setSuccess("Successfully upgraded to Pro!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (error) {
@@ -90,10 +77,14 @@ const DashboardPage = ({ user, setUser }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    delete axios.defaults.headers.common["Authorization"];
+  const logout = async () => {
+    try {
+      await axios.post(`${API_BASE_URL}/auth/logout`, {}, {
+        withCredentials: true
+      });
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
     setUser(null);
     navigate("/login");
   };

@@ -29,11 +29,8 @@ const NoteFormPage = ({ user }) => {
   const fetchNote = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
       const response = await axios.get(`${API_BASE_URL}/notes/${id}`, {
-        headers: {
-          Authorization: token ? `Bearer ${token}` : undefined,
-        },
+        withCredentials: true
       });
       const note = response.data;
       setTitle(note.title);
@@ -53,11 +50,8 @@ const NoteFormPage = ({ user }) => {
     setSuccess("");
 
     try {
-      const token = localStorage.getItem("token");
       const config = {
-        headers: {
-          Authorization: token ? `Bearer ${token}` : undefined,
-        },
+        withCredentials: true
       };
 
       if (isEditing) {

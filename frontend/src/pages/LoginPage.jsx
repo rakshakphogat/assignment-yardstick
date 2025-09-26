@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.REACT_APP_API_URL || "https://yardstick-backend-sandy.vercel.app";
 
 const LoginPage = ({ setUser }) => {
   const [email, setEmail] = useState("admin@acme.test");
@@ -34,12 +34,9 @@ const LoginPage = ({ setUser }) => {
           withCredentials: true,
         }
       );
-      const { token, user } = response.data;
+      const { user } = response.data;
 
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
+      // No localStorage - cookies handle authentication
       setUser(user);
       navigate("/dashboard");
     } catch (error) {

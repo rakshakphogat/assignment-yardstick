@@ -49,37 +49,12 @@ const Tenant = mongoose.model('Tenant', TenantSchema);
 const User = mongoose.model('User', UserSchema);
 const Note = mongoose.model('Note', NoteSchema);
 
-// Seed data function
-async function seedData() {
-    const existingTenants = await Tenant.countDocuments();
-    if (existingTenants > 0) return; // Already seeded
-
-    // Create tenants
-    const acmeTenant = await Tenant.create({ name: 'Acme Corporation', slug: 'acme' });
-    const globexTenant = await Tenant.create({ name: 'Globex Corporation', slug: 'globex' });
-
-    // Create users (password should be hashed in production)
-    await User.create([
-        { email: 'admin@acme.test', password: 'password', role: 'admin', tenantId: acmeTenant._id },
-        { email: 'user@acme.test', password: 'password', role: 'member', tenantId: acmeTenant._id },
-        { email: 'admin@globex.test', password: 'password', role: 'admin', tenantId: globexTenant._id },
-        { email: 'user@globex.test', password: 'password', role: 'member', tenantId: globexTenant._id }
-    ]);
-
-    console.log('Database seeded successfully');
-}
-
 // Authentication middleware
 const authenticateToken = async (req, res, next) => {
-    // Check Authorization header first (for Postman/API clients)
+    // Extract token from cookies
     let token = null;
-    const authHeader = req.headers['authorization'];
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.split(' ')[1];
-    }
-    // If no Authorization header, check cookies (for web browsers)
-    else if (req.headers.cookie) {
+    if (req.headers.cookie) {
         const cookies = req.headers.cookie.split(';');
         for (let cookie of cookies) {
             const [name, value] = cookie.trim().split('=');
@@ -91,7 +66,10 @@ const authenticateToken = async (req, res, next) => {
     }
 
     if (!token) {
-        return res.status(401).json({ error: 'Access token required' });
+        return res.status(401).json({
+            error: 'Access token required',
+            hint: 'Please login to get authentication cookie'
+        });
     }
 
     try {
@@ -103,7 +81,10 @@ const authenticateToken = async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
-        return res.status(403).json({ error: 'Invalid token' });
+        return res.status(403).json({
+            error: 'Invalid token',
+            hint: 'Please login again'
+        });
     }
 };
 
@@ -134,28 +115,6 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-// Debug endpoint to check headers and cookies
-app.get('/debug/headers', (req, res) => {
-    res.json({
-        headers: req.headers,
-        cookies: req.headers.cookie || 'No cookies found',
-        origin: req.headers.origin || 'No origin header',
-        userAgent: req.headers['user-agent'] || 'No user agent'
-    });
-});
-
-// Test auth endpoint  
-app.get('/auth/test', authenticateToken, (req, res) => {
-    res.json({
-        message: 'Authentication successful!',
-        user: {
-            email: req.user.email,
-            role: req.user.role,
-            tenant: req.user.tenantId.name
-        }
-    });
-});
-
 // Login endpoint
 app.post('/auth/login', async (req, res) => {
     const { email, password } = req.body;
@@ -168,7 +127,7 @@ app.post('/auth/login', async (req, res) => {
 
         const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '24h' });
 
-        // Set HTTP-only cookie (for same-origin) and return token (for cross-origin)
+        // Set HTTP-only cookie for authentication
         res.cookie('token', token, {
             httpOnly: true,
             secure: true,
@@ -177,7 +136,7 @@ app.post('/auth/login', async (req, res) => {
         });
 
         res.json({
-            token, // Still return token for API clients like Postman
+            message: 'Login successful',
             user: {
                 id: user._id,
                 email: user.email,
@@ -193,6 +152,23 @@ app.post('/auth/login', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: 'Server error' });
     }
+});
+
+// Get current user endpoint
+app.get('/auth/me', authenticateToken, (req, res) => {
+    res.json({
+        user: {
+            id: req.user._id,
+            email: req.user.email,
+            role: req.user.role,
+            tenant: {
+                id: req.user.tenantId._id,
+                name: req.user.tenantId.name,
+                slug: req.user.tenantId.slug,
+                subscription: req.user.tenantId.subscription
+            }
+        }
+    });
 });
 
 // Logout endpoint

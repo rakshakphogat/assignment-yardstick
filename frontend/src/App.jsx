@@ -25,17 +25,26 @@ const App = () => {
     // Configure axios to always send cookies
     axios.defaults.withCredentials = true;
 
-    const token = localStorage.getItem("token");
-    const userStr = localStorage.getItem("user");
+    // Try to get current user from server using cookie
+    const checkCurrentUser = async () => {
+      try {
+        const response = await axios.get(
+          `${
+            process.env.REACT_APP_API_URL ||
+            "https://yardstick-backend-sandy.vercel.app"
+          }/auth/me`
+        );
+        setUser(response.data.user);
+      } catch (error) {
+        // No valid session, user needs to login
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (token && userStr) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      setUser(JSON.parse(userStr));
-    }
-
-    setLoading(false);
+    checkCurrentUser();
   }, []);
-
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
