@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+const API_BASE_URL =
+  import.meta.env.REACT_APP_API_URL || "http://localhost:3001";
 
 const NoteFormPage = ({ user }) => {
   const [title, setTitle] = useState("");
@@ -15,18 +16,7 @@ const NoteFormPage = ({ user }) => {
   const { id } = useParams();
   const isEditing = Boolean(id);
 
-  useEffect(() => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-
-    if (isEditing) {
-      fetchNote();
-    }
-  }, [user, navigate, isEditing, id]);
-
-  const fetchNote = async () => {
+  const fetchNote = React.useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_BASE_URL}/notes/${id}`, {
@@ -36,12 +26,24 @@ const NoteFormPage = ({ user }) => {
       setTitle(note.title);
       setContent(note.content);
     } catch (error) {
+      console.log(error);
       setError("Failed to fetch note");
       navigate("/dashboard");
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    if (isEditing) {
+      fetchNote();
+    }
+  }, [user, navigate, isEditing, id, fetchNote]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

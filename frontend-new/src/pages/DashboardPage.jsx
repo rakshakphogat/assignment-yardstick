@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "https://yardstick-backend-sandy.vercel.app";
+const API_BASE_URL = import.meta.env.REACT_APP_API_URL;
+("https://yardstick-backend-sandy.vercel.app");
 
 const DashboardPage = ({ user, setUser }) => {
   const [notes, setNotes] = useState([]);
@@ -28,6 +28,7 @@ const DashboardPage = ({ user, setUser }) => {
       });
       setNotes(response.data);
     } catch (error) {
+      console.log(error);
       setError("Failed to fetch notes");
     } finally {
       setLoading(false);
@@ -46,6 +47,7 @@ const DashboardPage = ({ user, setUser }) => {
       setSuccess("Note deleted successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (error) {
+      console.log(error);
       setError("Failed to delete note");
     } finally {
       setLoading(false);
@@ -71,6 +73,7 @@ const DashboardPage = ({ user, setUser }) => {
       setSuccess("Successfully upgraded to Pro!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (error) {
+      console.log(error);
       setError("Failed to upgrade subscription");
     } finally {
       setLoading(false);

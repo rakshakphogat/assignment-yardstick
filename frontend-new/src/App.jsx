@@ -30,12 +30,13 @@ const App = () => {
       try {
         const response = await axios.get(
           `${
-            process.env.REACT_APP_API_URL ||
+            import.meta.env.REACT_APP_API_URL ||
             "https://yardstick-backend-sandy.vercel.app"
           }/auth/me`
         );
         setUser(response.data.user);
       } catch (error) {
+        console.log(error);
         // No valid session, user needs to login
         setUser(null);
       } finally {
