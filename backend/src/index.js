@@ -134,6 +134,28 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
+// Debug endpoint to check headers and cookies
+app.get('/debug/headers', (req, res) => {
+    res.json({
+        headers: req.headers,
+        cookies: req.headers.cookie || 'No cookies found',
+        origin: req.headers.origin || 'No origin header',
+        userAgent: req.headers['user-agent'] || 'No user agent'
+    });
+});
+
+// Test auth endpoint  
+app.get('/auth/test', authenticateToken, (req, res) => {
+    res.json({
+        message: 'Authentication successful!',
+        user: {
+            email: req.user.email,
+            role: req.user.role,
+            tenant: req.user.tenantId.name
+        }
+    });
+});
+
 // Login endpoint
 app.post('/auth/login', async (req, res) => {
     const { email, password } = req.body;
@@ -146,10 +168,10 @@ app.post('/auth/login', async (req, res) => {
 
         const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '24h' });
 
-        // Set HTTP-only cookie
+        // Set HTTP-only cookie (for same-origin) and return token (for cross-origin)
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: true,
             sameSite: 'none',
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
         });

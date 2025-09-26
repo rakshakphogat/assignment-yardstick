@@ -23,8 +23,12 @@ const DashboardPage = ({ user, setUser }) => {
   const fetchNotes = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem("token");
       const response = await axios.get(`${API_BASE_URL}/notes`, {
         withCredentials: true,
+        headers: {
+          Authorization: token ? `Bearer ${token}` : undefined,
+        },
       });
       setNotes(response.data);
     } catch (error) {
@@ -39,8 +43,12 @@ const DashboardPage = ({ user, setUser }) => {
 
     setLoading(true);
     try {
+      const token = localStorage.getItem("token");
       await axios.delete(`${API_BASE_URL}/notes/${id}`, {
         withCredentials: true,
+        headers: {
+          Authorization: token ? `Bearer ${token}` : undefined,
+        },
       });
       setNotes(notes.filter((note) => note._id !== id));
       setSuccess("Note deleted successfully!");
@@ -56,11 +64,15 @@ const DashboardPage = ({ user, setUser }) => {
     setLoading(true);
     setError("");
     try {
+      const token = localStorage.getItem("token");
       await axios.post(
         `${API_BASE_URL}/tenants/${user.tenant.slug}/upgrade`,
         {},
         {
           withCredentials: true,
+          headers: {
+            Authorization: token ? `Bearer ${token}` : undefined,
+          },
         }
       );
       const updatedUser = {

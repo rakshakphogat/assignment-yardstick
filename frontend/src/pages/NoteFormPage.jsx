@@ -29,7 +29,12 @@ const NoteFormPage = ({ user }) => {
   const fetchNote = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/notes/${id}`);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_BASE_URL}/notes/${id}`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : undefined,
+        },
+      });
       const note = response.data;
       setTitle(note.title);
       setContent(note.content);
@@ -48,11 +53,22 @@ const NoteFormPage = ({ user }) => {
     setSuccess("");
 
     try {
+      const token = localStorage.getItem("token");
+      const config = {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : undefined,
+        },
+      };
+
       if (isEditing) {
-        await axios.put(`${API_BASE_URL}/notes/${id}`, { title, content });
+        await axios.put(
+          `${API_BASE_URL}/notes/${id}`,
+          { title, content },
+          config
+        );
         setSuccess("Note updated successfully!");
       } else {
-        await axios.post(`${API_BASE_URL}/notes`, { title, content });
+        await axios.post(`${API_BASE_URL}/notes`, { title, content }, config);
         setSuccess("Note created successfully!");
       }
 
