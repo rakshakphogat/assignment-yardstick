@@ -24,7 +24,7 @@ const DashboardPage = ({ user, setUser }) => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_BASE_URL}/notes`, {
-        withCredentials: true
+        withCredentials: true,
       });
       setNotes(response.data);
     } catch (error) {
@@ -40,7 +40,7 @@ const DashboardPage = ({ user, setUser }) => {
     setLoading(true);
     try {
       await axios.delete(`${API_BASE_URL}/notes/${id}`, {
-        withCredentials: true
+        withCredentials: true,
       });
       setNotes(notes.filter((note) => note._id !== id));
       setSuccess("Note deleted successfully!");
@@ -60,7 +60,7 @@ const DashboardPage = ({ user, setUser }) => {
         `${API_BASE_URL}/tenants/${user.tenant.slug}/upgrade`,
         {},
         {
-          withCredentials: true
+          withCredentials: true,
         }
       );
       const updatedUser = {
@@ -79,9 +79,13 @@ const DashboardPage = ({ user, setUser }) => {
 
   const logout = async () => {
     try {
-      await axios.post(`${API_BASE_URL}/auth/logout`, {}, {
-        withCredentials: true
-      });
+      await axios.post(
+        `${API_BASE_URL}/auth/logout`,
+        {},
+        {
+          withCredentials: true,
+        }
+      );
     } catch (error) {
       console.error("Error logging out:", error);
     }

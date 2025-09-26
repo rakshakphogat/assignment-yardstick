@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "https://yardstick-backend-sandy.vercel.app";
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "https://yardstick-backend-sandy.vercel.app";
 
 const LoginPage = ({ setUser }) => {
   const [email, setEmail] = useState("admin@acme.test");

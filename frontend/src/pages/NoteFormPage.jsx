@@ -30,7 +30,7 @@ const NoteFormPage = ({ user }) => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_BASE_URL}/notes/${id}`, {
-        withCredentials: true
+        withCredentials: true,
       });
       const note = response.data;
       setTitle(note.title);
@@ -51,7 +51,7 @@ const NoteFormPage = ({ user }) => {
 
     try {
       const config = {
-        withCredentials: true
+        withCredentials: true,
       };
 
       if (isEditing) {
