@@ -11,7 +11,7 @@ const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://rakshakphogat_db_u
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://assignment-yardstick-eight.vercel.app', 'https://yardstick-frontend-omega.vercel.app'],
+    origin: ['http://localhost:5173', 'https://assignment-yardstick-eight.vercel.app', 'https://yardstick-frontend-omega.vercel.app'],
     credentials: true
 }));
 app.use(cookieParser());
@@ -55,7 +55,6 @@ const Note = mongoose.model('Note', NoteSchema);
 const authenticateToken = async (req, res, next) => {
     // Extract token from cookie (parsed by cookie-parser)
     const token = req.cookies.token;
-
     if (!token) {
         return res.status(401).json({
             error: 'Access token required',
@@ -202,6 +201,7 @@ app.get('/notes', authenticateToken, async (req, res) => {
         const notes = await Note.find({ tenantId: req.user.tenantId._id })
             .populate('userId', 'email')
             .sort({ createdAt: -1 });
+        console.log(notes)
         res.json(notes);
     } catch (error) {
         res.status(500).json({ error: 'Server error' });

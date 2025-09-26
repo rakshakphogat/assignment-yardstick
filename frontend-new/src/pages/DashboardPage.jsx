@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://yardstick-backend-sandy.vercel.app";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const DashboardPage = ({ user, setUser }) => {
   const [notes, setNotes] = useState([]);

@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://yardstick-backend-sandy.vercel.app";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const LoginPage = ({ setUser }) => {
   const [email, setEmail] = useState("admin@acme.test");
@@ -25,6 +24,7 @@ const LoginPage = ({ setUser }) => {
     setError("");
 
     try {
+      console.log("calling");
       const response = await axios.post(
         `${API_BASE_URL}/auth/login`,
         {
@@ -35,8 +35,10 @@ const LoginPage = ({ setUser }) => {
           withCredentials: true,
         }
       );
+      console.log("done");
       const { user } = response.data;
-
+      console.log(API_BASE_URL);
+      console.log(user);
       // No localStorage - cookies handle authentication
       setUser(user);
       navigate("/dashboard");
