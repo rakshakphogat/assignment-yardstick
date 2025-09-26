@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+import cookieParser from 'cookie-parser';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,6 +14,7 @@ app.use(cors({
     origin: ['http://localhost:3000', 'https://assignment-yardstick-eight.vercel.app', 'https://yardstick-frontend-omega.vercel.app'],
     credentials: true
 }));
+app.use(cookieParser());
 app.use(express.json());
 
 // Connect to MongoDB
@@ -51,19 +53,8 @@ const Note = mongoose.model('Note', NoteSchema);
 
 // Authentication middleware
 const authenticateToken = async (req, res, next) => {
-    // Extract token from cookies
-    let token = null;
-
-    if (req.headers.cookie) {
-        const cookies = req.headers.cookie.split(';');
-        for (let cookie of cookies) {
-            const [name, value] = cookie.trim().split('=');
-            if (name === 'token') {
-                token = value;
-                break;
-            }
-        }
-    }
+    // Extract token from cookie (parsed by cookie-parser)
+    const token = req.cookies.token;
 
     if (!token) {
         return res.status(401).json({
