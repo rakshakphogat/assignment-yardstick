@@ -11,7 +11,7 @@ const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://rakshakphogat_db_u
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:5173', 'https://assignment-yardstick-eight.vercel.app', 'https://yardstick-frontend-omega.vercel.app'],
+    origin: ['http://localhost:5173', 'https://assignment-yardstick-eight.vercel.app', 'https://yardstick-frontend-omega.vercel.app', 'https://yardstick-frontend-omega.vercel.app/login'],
     credentials: true
 }));
 app.use(cookieParser());
