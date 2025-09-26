@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "https://yardstick-backend-sandy.vercel.app";
 
 const DashboardPage = ({ user, setUser }) => {
   const [notes, setNotes] = useState([]);
@@ -22,7 +23,9 @@ const DashboardPage = ({ user, setUser }) => {
   const fetchNotes = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/notes`);
+      const response = await axios.get(`${API_BASE_URL}/notes`, {
+        withCredentials: true,
+      });
       setNotes(response.data);
     } catch (error) {
       setError("Failed to fetch notes");
@@ -36,7 +39,9 @@ const DashboardPage = ({ user, setUser }) => {
 
     setLoading(true);
     try {
-      await axios.delete(`${API_BASE_URL}/notes/${id}`);
+      await axios.delete(`${API_BASE_URL}/notes/${id}`, {
+        withCredentials: true,
+      });
       setNotes(notes.filter((note) => note._id !== id));
       setSuccess("Note deleted successfully!");
       setTimeout(() => setSuccess(""), 3000);
@@ -51,7 +56,13 @@ const DashboardPage = ({ user, setUser }) => {
     setLoading(true);
     setError("");
     try {
-      await axios.post(`${API_BASE_URL}/tenants/${user.tenant.slug}/upgrade`);
+      await axios.post(
+        `${API_BASE_URL}/tenants/${user.tenant.slug}/upgrade`,
+        {},
+        {
+          withCredentials: true,
+        }
+      );
       const updatedUser = {
         ...user,
         tenant: { ...user.tenant, subscription: "pro" },

@@ -9,7 +9,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://rakshakphogat_db_user:OeySKBa7OQtjzKzb@cluster0.tjhnlcr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:3000', 'https://assignment-yardstick-eight.vercel.app'],
+    credentials: true
+}));
 app.use(express.json());
 
 // Connect to MongoDB
@@ -68,8 +71,24 @@ async function seedData() {
 
 // Authentication middleware
 const authenticateToken = async (req, res, next) => {
+    // Check Authorization header first (for Postman/API clients)
+    let token = null;
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    }
+    // If no Authorization header, check cookies (for web browsers)
+    else if (req.headers.cookie) {
+        const cookies = req.headers.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'token') {
+                token = value;
+                break;
+            }
+        }
+    }
 
     if (!token) {
         return res.status(401).json({ error: 'Access token required' });
@@ -127,8 +146,16 @@ app.post('/auth/login', async (req, res) => {
 
         const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '24h' });
 
+        // Set HTTP-only cookie
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'none',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
+
         res.json({
-            token,
+            token, // Still return token for API clients like Postman
             user: {
                 id: user._id,
                 email: user.email,
@@ -144,6 +171,12 @@ app.post('/auth/login', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: 'Server error' });
     }
+});
+
+// Logout endpoint
+app.post('/auth/logout', (req, res) => {
+    res.clearCookie('token');
+    res.json({ message: 'Logged out successfully' });
 });
 
 // Notes CRUD endpoints

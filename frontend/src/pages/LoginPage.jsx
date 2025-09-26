@@ -24,10 +24,16 @@ const LoginPage = ({ setUser }) => {
     setError("");
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
-        email,
-        password,
-      });
+      const response = await axios.post(
+        `${API_BASE_URL}/auth/login`,
+        {
+          email,
+          password,
+        },
+        {
+          withCredentials: true,
+        }
+      );
       const { token, user } = response.data;
 
       localStorage.setItem("token", token);

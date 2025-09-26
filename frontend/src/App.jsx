@@ -20,8 +20,11 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Configure axios and check for existing user on app load
+  // Configure axios to send cookies and check for existing user on app load
   useEffect(() => {
+    // Configure axios to always send cookies
+    axios.defaults.withCredentials = true;
+
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
 
