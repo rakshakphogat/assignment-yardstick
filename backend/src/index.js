@@ -97,6 +97,19 @@ const requireAdmin = (req, res, next) => {
 };
 
 // Routes
+// Root endpoint
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Multi-Tenant SaaS Notes API',
+        status: 'running',
+        endpoints: {
+            health: '/health',
+            login: 'POST /auth/login',
+            notes: 'GET/POST/PUT/DELETE /notes'
+        }
+    });
+});
+
 // Health endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
