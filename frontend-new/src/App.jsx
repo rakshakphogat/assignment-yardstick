@@ -30,7 +30,7 @@ const App = () => {
       try {
         const response = await axios.get(
           `${
-            import.meta.env.REACT_APP_API_URL ||
+            import.meta.env.VITE_API_URL ||
             "https://yardstick-backend-sandy.vercel.app"
           }/auth/me`
         );
